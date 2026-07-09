@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gyan-cell/i-hate-403/internal/bypass"
@@ -29,6 +30,7 @@ type scanRequest struct {
 	Workers  int               `json:"workers"`
 	Timeout  int               `json:"timeout"`
 	Insecure bool              `json:"insecure"`
+	Proxy    string            `json:"proxy"`
 	Filter   []string          `json:"filter"`
 	Headers  map[string]string `json:"headers"`
 }
@@ -145,8 +147,9 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 
 	// SSE headers.
 	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "no-cache, no-transform")
 	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "streaming not supported", http.StatusInternalServerError)
@@ -167,6 +170,7 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 	clientCfg := httpclient.Config{
 		Timeout:   timeout,
 		Insecure:  req.Insecure,
+		ProxyURL:  req.Proxy,
 		UserAgent: "i-hate-403-web/dev",
 	}
 	hc := httpclient.NewClient(clientCfg)
@@ -186,7 +190,19 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 	cal := calibrate.NewCalibrator(hc.HTTPClient(), req.Insecure)
 	baseline, err := cal.CaptureBaseline(ctx, "GET", targetURL, req.Headers)
 	if err != nil {
-		sendSSE(scanEvent{Type: "error", Message: fmt.Sprintf("calibration failed: %v", err)})
+		errMsg := err.Error()
+		hint := ""
+		switch {
+		case strings.Contains(errMsg, "deadline exceeded") || strings.Contains(errMsg, "timeout") || strings.Contains(errMsg, "connection timed out"):
+			hint = " — Target is unreachable or too slow. Try: increase Timeout, add a Proxy URL (e.g. http://127.0.0.1:8080), or check your VPN/network."
+		case strings.Contains(errMsg, "connection refused"):
+			hint = " — Connection refused. The server is up but rejecting connections on this port."
+		case strings.Contains(errMsg, "no such host") || strings.Contains(errMsg, "dial tcp: lookup"):
+			hint = " — DNS resolution failed. Check the URL spelling or your network/DNS settings."
+		case strings.Contains(errMsg, "certificate") || strings.Contains(errMsg, "x509"):
+			hint = " — TLS certificate error. Enable 'Skip TLS Verify' in the settings."
+		}
+		sendSSE(scanEvent{Type: "error", Message: fmt.Sprintf("calibration failed: %v%s", err, hint)})
 		return
 	}
 
@@ -248,38 +264,57 @@ func scanHandler(w http.ResponseWriter, r *http.Request) {
 		Message: fmt.Sprintf("Running %d technique(s), ~%d payloads", len(techList), totalPayloads),
 	})
 
-	// Run engine.
+	// Run engine with real-time SSE streaming.
+	scorer := score.NewScorer(*baseline, "", req.Insecure)
+	resultStream := make(chan score.ScoredResult, 100)
+	doneCh := make(chan struct{})
+	start := time.Now()
+
+	var scannedCount int
+	go func() {
+		defer close(doneCh)
+		for sr := range resultStream {
+			scannedCount++
+			sendSSE(scanEvent{
+				Type:    "result",
+				Scanned: scannedCount,
+				Total:   totalPayloads,
+				Result:  toWebResult(sr),
+				Elapsed: time.Since(start).Round(time.Millisecond).String(),
+			})
+		}
+	}()
+
+	var mu sync.Mutex
 	engCfg := bypass.EngineConfig{
 		Threads:   req.Workers,
 		Timeout:   timeout,
 		Insecure:  req.Insecure,
 		UserAgent: clientCfg.UserAgent,
+		OnResult: func(raw bypass.Result) {
+			sr := scorer.Score(raw)
+			mu.Lock()
+			select {
+			case resultStream <- sr:
+			case <-ctx.Done():
+			}
+			mu.Unlock()
+		},
 	}
 	engine := bypass.NewEngine(engCfg, hc.HTTPClient(), *baseline, registry)
 
-	start := time.Now()
-	rawResults, err := engine.Run(ctx, target, techList)
+	_, err = engine.Run(ctx, target, techList)
+	close(resultStream)
+	<-doneCh
+
 	if err != nil && ctx.Err() == nil {
 		sendSSE(scanEvent{Type: "error", Message: fmt.Sprintf("engine error: %v", err)})
 		return
 	}
 
-	// Score and stream results one by one.
-	scorer := score.NewScorer(*baseline, "", req.Insecure)
-	for i, raw := range rawResults {
-		sr := scorer.Score(raw)
-		sendSSE(scanEvent{
-			Type:    "result",
-			Scanned: i + 1,
-			Total:   totalPayloads,
-			Result:  toWebResult(sr),
-			Elapsed: time.Since(start).Round(time.Millisecond).String(),
-		})
-	}
-
 	sendSSE(scanEvent{
 		Type:    "done",
-		Scanned: len(rawResults),
+		Scanned: scannedCount,
 		Total:   totalPayloads,
 		Elapsed: time.Since(start).Round(time.Millisecond).String(),
 	})

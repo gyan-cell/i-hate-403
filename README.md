@@ -2,7 +2,7 @@
 
 **Because 403 is just a suggestion.**
 
-> ⚠️ **AUTHORIZED USE ONLY.** This tool is intended for security professionals conducting authorized penetration testing or bug bounty research. Using it against targets without explicit written permission is illegal and unethical. The authors accept no liability for misuse.
+> **[!] AUTHORIZED USE ONLY.** This tool is intended for security professionals conducting authorized penetration testing or bug bounty research. Using it against targets without explicit written permission is illegal and unethical. The authors accept no liability for misuse.
 
 ---
 
@@ -12,20 +12,20 @@ A production-grade 403/401 bypass tool built in Go. It goes beyond status-code g
 
 | Feature | nomore403 | 400OK | **i-hate-403** |
 |---------|-----------|-------|----------------|
-| Baseline calibration | ❌ | Partial | ✅ Full (status + length + hash + fingerprint) |
-| Soft-404 detection | ❌ | ❌ | ✅ |
-| Fragment-stripping detection | ❌ | ❌ | ✅ |
-| Confidence scoring | ❌ | ❌ | ✅ HIGH/MEDIUM/LOW/INTERESTING |
-| Concurrent per-technique | ❌ | ❌ | ✅ Worker pool per technique |
-| Deduplication | ❌ | Partial | ✅ By status+length+body hash |
-| Overlong UTF-8 (2+3 byte) | ❌ | ❌ | ✅ |
-| IIS %uXXXX encoding | ❌ | ❌ | ✅ |
-| Raw request file (Burp/ZAP) | ❌ | ❌ | ✅ |
-| JSON/CSV output | ❌ | ❌ | ✅ |
-| Rate limiting | ❌ | ❌ | ✅ |
-| Exponential backoff | ❌ | ❌ | ✅ |
-| Graceful Ctrl+C (partial flush) | ❌ | ❌ | ✅ |
-| `--quick` time-boxed preset | ❌ | ❌ | ✅ |
+| Baseline calibration | No | Partial | Yes Full (status + length + hash + fingerprint) |
+| Soft-404 detection | No | No | Yes |
+| Fragment-stripping detection | No | No | Yes |
+| Confidence scoring | No | No | Yes HIGH/MEDIUM/LOW/INTERESTING |
+| Concurrent per-technique | No | No | Yes Worker pool per technique |
+| Deduplication | No | Partial | Yes By status+length+body hash |
+| Overlong UTF-8 (2+3 byte) | No | No | Yes |
+| IIS %uXXXX encoding | No | No | Yes |
+| Raw request file (Burp/ZAP) | No | No | Yes |
+| JSON/CSV output | No | No | Yes |
+| Rate limiting | No | No | Yes |
+| Exponential backoff | No | No | Yes |
+| Graceful Ctrl+C (partial flush) | No | No | Yes |
+| `--quick` time-boxed preset | No | No | Yes |
 
 ## Install
 

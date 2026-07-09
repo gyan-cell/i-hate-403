@@ -61,12 +61,12 @@ func PrintBaseline(b calibrate.Baseline) {
 				b.Tolerance.Mean, b.Tolerance.StdDev,
 				b.Tolerance.Samples))
 		if b.Tolerance.SoftNotFound {
-			cError.Fprintln(os.Stderr, "  ⚠  Soft-404 detected (server returns 200 for non-existent paths)")
+			cError.Fprintln(os.Stderr, "  !  Soft-404 detected (server returns 200 for non-existent paths)")
 		}
 	}
 
 	if b.FragmentStripped {
-		cDim.Fprintln(os.Stderr, "  ℹ  Server strips URL fragments")
+		cDim.Fprintln(os.Stderr, "  i  Server strips URL fragments")
 	}
 
 	if b.Fingerprint != nil {
@@ -123,11 +123,11 @@ func PrintResults(results []score.ScoredResult, verbose bool) {
 		if verbose {
 			bodyDelta := "—"
 			if r.BodyChanged {
-				bodyDelta = "✓"
+				bodyDelta = "Y"
 			}
 			typeDelta := "—"
 			if r.TypeChanged {
-				typeDelta = "✓"
+				typeDelta = "Y"
 			}
 			printer.Fprintf(w, "\t%s\t%s\t%d", bodyDelta, typeDelta, r.ResponseTime)
 		}

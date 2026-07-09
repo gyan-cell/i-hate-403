@@ -44,6 +44,8 @@ type EngineConfig struct {
 	StatusFilter []int
 	// RateLimiter throttles outbound requests. Nil = unlimited.
 	RateLimiter *rate.Limiter
+	// OnResult is a callback invoked concurrently whenever a payload is executed.
+	OnResult func(Result)
 }
 
 // Engine orchestrates concurrent bypass technique execution.
@@ -157,6 +159,10 @@ func (e *Engine) Run(ctx context.Context, target *Target, techniques []Technique
 						raw = e.execCurl(ctx, p)
 					} else {
 						raw = e.executePayload(ctx, p)
+					}
+
+					if e.config.OnResult != nil {
+						e.config.OnResult(raw)
 					}
 
 					resultCh <- raw

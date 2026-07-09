@@ -138,6 +138,9 @@ func applyUnicodeReplace(path, slashRepl, dotRepl string) string {
 // Generate produces Unicode bypass payloads for the given target.
 func (t *UnicodeTechnique) Generate(target *Target) []Payload {
 	path := target.Path
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
 	base := target.BaseURL()
 	replacements := buildReplacements()
 
@@ -153,7 +156,7 @@ func (t *UnicodeTechnique) Generate(target *Target) []Payload {
 		payloads = append(payloads, makeRawPayload(
 			t.Name(),
 			fmt.Sprintf("unicode: %s (slash only)", r.label),
-			"GET", base+encoded, nil,
+			"GET", base+"/"+encoded, nil,
 		))
 
 		// Dot-only replacement
@@ -161,7 +164,7 @@ func (t *UnicodeTechnique) Generate(target *Target) []Payload {
 		payloads = append(payloads, makeRawPayload(
 			t.Name(),
 			fmt.Sprintf("unicode: %s (dot only)", r.label),
-			"GET", base+encoded, nil,
+			"GET", base+"/"+encoded, nil,
 		))
 
 		// Both slash and dot
@@ -169,7 +172,7 @@ func (t *UnicodeTechnique) Generate(target *Target) []Payload {
 		payloads = append(payloads, makeRawPayload(
 			t.Name(),
 			fmt.Sprintf("unicode: %s (slash + dot)", r.label),
-			"GET", base+encoded, nil,
+			"GET", base+"/"+encoded, nil,
 		))
 	}
 

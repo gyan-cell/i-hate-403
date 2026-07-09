@@ -103,6 +103,9 @@ func mixedEncodeReverse(s string) string {
 // Generate produces double/triple/mixed encoding payloads for the target.
 func (t *DoubleEncodingTechnique) Generate(target *Target) []Payload {
 	path := target.Path
+	if strings.HasPrefix(path, "/") {
+		path = path[1:]
+	}
 	base := target.BaseURL()
 
 	type variant struct {
@@ -123,14 +126,14 @@ func (t *DoubleEncodingTechnique) Generate(target *Target) []Payload {
 	for i, seg := range target.Segments {
 		encoded := doublePercentEncode(seg)
 		mutated := replaceSeg(target.Segments, i, encoded)
-		p := joinPath(mutated...)
+		p := strings.Join(mutated, "/")
 		desc := fmt.Sprintf("double-encode segment %d (%s)", i, seg)
 		variants = append(variants, variant{desc, p})
 	}
 
 	payloads := make([]Payload, 0, len(variants))
 	for _, v := range variants {
-		fullURL := base + v.encoded
+		fullURL := base + "/" + v.encoded
 		desc := fmt.Sprintf("double-encoding: %s", v.label)
 		payloads = append(payloads, makeRawPayload(
 			t.Name(), desc, "GET", fullURL, nil,

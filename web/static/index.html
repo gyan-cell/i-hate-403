@@ -655,6 +655,12 @@
         </div>
 
         <div class="form-group form-full">
+          <label class="form-label" for="inp-proxy">Proxy URL <span style="color:var(--text-muted)">(optional — e.g. http://127.0.0.1:8080)</span></label>
+          <input id="inp-proxy" class="form-input" type="text"
+            placeholder="http://127.0.0.1:8080" />
+        </div>
+
+        <div class="form-group form-full">
           <label class="form-label" for="inp-headers">Extra Headers <span style="color:var(--text-muted)">(optional — Key: Value, one per line)</span></label>
           <textarea id="inp-headers" class="form-input" rows="2"
             placeholder="Authorization: Bearer token&#10;Cookie: session=abc123"
@@ -804,12 +810,13 @@ form.addEventListener('submit', async e => {
   const workers = parseInt($('inp-workers').value) || 10;
   const timeout = parseInt($('inp-timeout').value) || 10;
   const insecure= $('inp-insecure').checked;
+  const proxy   = $('inp-proxy').value.trim();
   const cats    = [...document.querySelectorAll('[name=cat]:checked')].map(x => x.value);
   const headers = parseHeaders($('inp-headers').value);
 
   if (!url) return;
 
-  startScan({ url, path, workers, timeout, insecure, filter: cats, headers });
+  startScan({ url, path, workers, timeout, insecure, proxy, filter: cats, headers });
 });
 
 /* ─── Parse extra headers textarea ────────────────────────────────── */
@@ -899,6 +906,13 @@ async function startScan(cfg) {
           stErrors.textContent   = errors;
           scanCountLbl.textContent = `${done} / ${total}`;
 
+        } else if (ev.type === 'baseline') {
+          showToast('Baseline: ' + ev.data.message);
+
+        } else if (ev.type === 'error') {
+          showToast('Error: ' + ev.data.message, 'error');
+          resultsBody.innerHTML = `<tr><td colspan="5" class="empty-state" style="color:var(--red);">Error: ${escHtml(ev.data.message)}</td></tr>`;
+
         } else if (ev.type === 'done') {
           onDone(total, bypassed);
         }
@@ -918,7 +932,8 @@ async function startScan(cfg) {
 /* ─── SSE parser ───────────────────────────────────────────────────── */
 function parseSSE(raw) {
   const list = [];
-  const blocks = raw.split('\n\n');
+  const normalized = raw.replace(/\r\n/g, '\n');
+  const blocks = normalized.split('\n\n');
   const remainder = blocks.pop(); // last block may be incomplete
   for (const block of blocks) {
     let type = '', dataStr = '';
@@ -1005,12 +1020,21 @@ function appendRow(r) {
           <span class="details-lbl">Reproduction Command</span>
           <div class="details-code-wrap">
             <pre class="details-code"><code>${escHtml(r.curl || '# Curl command not generated')}</code></pre>
-            <button class="details-copy-btn" onclick="copyToClipboard(this, \`${escHtml(r.curl || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">Copy</button>
+            <button class="details-copy-btn">Copy</button>
           </div>
         </div>
       </div>
     </td>
   `;
+
+  // Attach dynamic event listener for copy button
+  const copyBtn = trDetails.querySelector('.details-copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // prevent collapsing the row
+      copyToClipboard(copyBtn, r.curl || '');
+    });
+  }
 
   // Toggle open/close on main row click
   tr.addEventListener('click', () => {
@@ -1061,8 +1085,8 @@ function escHtml(s) {
 function onDone(total, bypassed) {
   progressFill.style.width = '100%';
   const msg = bypassed > 0
-    ? `✓ ${bypassed} bypass${bypassed > 1 ? 'es' : ''} found out of ${total} techniques`
-    : `✗ No bypasses found out of ${total} techniques`;
+    ? `[+] ${bypassed} bypass${bypassed > 1 ? 'es' : ''} found out of ${total} techniques`
+    : `[-] No bypasses found out of ${total} techniques`;
   showToast(msg, bypassed > 0 ? 'success' : '');
 }
 
