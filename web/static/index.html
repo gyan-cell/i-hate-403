@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>403 Bypass — Access Control Testing Tool</title>
+  <meta name="description" content="Professional 403 Forbidden bypass & access control tester. 49 techniques across headers, path traversal, method overrides, and IP spoofing." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── Design Tokens ─────────────────────────────────────────── */
+    :root {
+      --void:        #020202;
+      --black-deep:  #060606;
+      --black-card:  #0b0b0b;
+      --black-panel: #0f0f0f;
+      --black-hover: #141414;
+      --border:      #1e1e1e;
+      --border-glow: #2a4a32;
+
+      --brg:         #003520;   /* British Racing Green */
+      --brg-mid:     #005c35;
+      --brg-light:   #008a50;
+      --green:       #00c957;
+      --green-text:  #00ff6e;
+      --green-dim:   rgba(0,201,87,.12);
+      --green-glow:  rgba(0,201,87,.25);
+
+      --gold:        #c8a84b;
+      --gold-light:  #e8c870;
+      --gold-dim:    rgba(200,168,75,.15);
+
+      --text:        #dcdcdc;
+      --text-dim:    #666;
+      --text-muted:  #333;
+
+      --red:         #ff4444;
+      --yellow:      #ffc107;
+      --blue:        #4499ff;
+
+      --font-display: 'Cormorant Garamond', Georgia, serif;
+      --font-mono:    'JetBrains Mono', 'Courier New', monospace;
+      --font-body:    'Inter', system-ui, sans-serif;
+
+      --radius:  6px;
+      --radius-lg: 12px;
+      --transition: .18s ease;
+    }
+
+    /* ─── Reset ─────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--void);
+      color: var(--text);
+      font-family: var(--font-body);
+      font-size: 14px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ─── Animated grid background ──────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        linear-gradient(rgba(0,201,87,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,201,87,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      animation: gridScroll 60s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes gridScroll {
+      to { background-position: 40px 40px; }
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────────── */
+    .container {
+      position: relative; z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ─── Header / Nav ───────────────────────────────────────────── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(6,6,6,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .logo {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .logo-mark {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--brg), var(--brg-mid));
+      border: 1px solid var(--brg-light);
+      border-radius: var(--radius);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 11px; font-weight: 600;
+      color: var(--green);
+      letter-spacing: .5px;
+      box-shadow: 0 0 16px var(--green-dim);
+    }
+    .logo-text {
+      font-family: var(--font-display);
+      font-size: 22px; font-weight: 500;
+      color: var(--gold);
+      letter-spacing: 2px;
+    }
+    .logo-text span { color: var(--green); }
+    .nav-badge {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 1px;
+    }
+
+    /* ─── Hero ───────────────────────────────────────────────────── */
+    .hero {
+      padding: 60px 0 40px;
+      text-align: center;
+    }
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--green);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      opacity: .8;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(36px, 5vw, 58px);
+      font-weight: 300;
+      color: var(--text);
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+    .hero-title strong {
+      color: var(--gold);
+      font-weight: 500;
+    }
+    .hero-sub {
+      font-size: 14px;
+      color: var(--text-dim);
+      max-width: 520px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .hero-pills {
+      display: flex; flex-wrap: wrap; justify-content: center;
+      gap: 8px; margin-bottom: 48px;
+    }
+    .pill {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      letter-spacing: .5px;
+      transition: var(--transition);
+    }
+    .pill:hover { border-color: var(--green); color: var(--green); }
+    .pill.active { border-color: var(--green); color: var(--green); background: var(--green-dim); }
+
+    /* ─── Cards ──────────────────────────────────────────────────── */
+    .card {
+      background: var(--black-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 20px;
+      transition: border-color var(--transition);
+    }
+    .card:hover { border-color: var(--border-glow); }
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 500;
+      color: var(--gold);
+      letter-spacing: 1px;
+      margin-bottom: 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card-title::before {
+      content: '';
+      width: 3px; height: 18px;
+      background: linear-gradient(180deg, var(--green), var(--brg-mid));
+      border-radius: 2px;
+    }
+
+    /* ─── Form ───────────────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .form-full { grid-column: 1 / -1; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .form-input {
+      background: var(--black-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color var(--transition), box-shadow var(--transition);
+      width: 100%;
+    }
+    .form-input:focus {
+      border-color: var(--brg-light);
+      box-shadow: 0 0 0 2px var(--green-dim);
+    }
+    .form-input::placeholder { color: var(--text-muted); }
+
+    /* Category toggles */
+    .toggle-row {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .toggle {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 14px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      transition: all var(--transition);
+      user-select: none;
+    }
+    .toggle input { display: none; }
+    .toggle-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: background var(--transition);
+    }
+    .toggle:has(input:checked) {
+      border-color: var(--green);
+      color: var(--green);
+      background: var(--green-dim);
+    }
+    .toggle:has(input:checked) .toggle-dot { background: var(--green); }
+
+    /* Scan button */
+    .btn-scan {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, var(--brg), var(--brg-mid));
+      border: 1px solid var(--brg-light);
+      border-radius: var(--radius);
+      color: var(--green);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-scan::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(0,201,87,.15), transparent);
+      transform: translateX(-100%);
+      transition: transform .4s ease;
+    }
+    .btn-scan:hover { box-shadow: 0 0 24px var(--green-glow); }
+    .btn-scan:hover::after { transform: translateX(100%); }
+    .btn-scan:active { transform: scale(.99); }
+    .btn-scan:disabled {
+      opacity: .5; cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* ─── Progress ───────────────────────────────────────────────── */
+    #progress-section { display: none; }
+    #progress-section.visible { display: block; }
+
+    .scan-meta {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+      font-family: var(--font-mono); font-size: 12px;
+    }
+    .scan-url { color: var(--green); }
+    .scan-count { color: var(--text-dim); }
+
+    .progress-track {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 14px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--brg-mid), var(--green));
+      border-radius: 2px;
+      width: 0%;
+      transition: width .3s ease;
+      position: relative;
+    }
+    .progress-fill::after {
+      content: '';
+      position: absolute; right: 0; top: -2px;
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--green);
+    }
+    /* Animated scanning beam */
+    .progress-track::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(90deg, transparent, rgba(0,201,87,.3), transparent);
+      transform: translateX(-100%);
+    }
+    .progress-track.scanning::before {
+      animation: scan 1.5s linear infinite;
+    }
+    @keyframes scan {
+      to { transform: translateX(200%); }
+    }
+
+    .stat-row {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    }
+    .stat-box {
+      background: var(--black-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      text-align: center;
+    }
+    .stat-label {
+      font-family: var(--font-mono); font-size: 9px;
+      color: var(--text-dim); letter-spacing: 1px;
+      text-transform: uppercase; margin-bottom: 6px;
+    }
+    .stat-value {
+      font-family: var(--font-mono); font-size: 22px; font-weight: 500;
+      color: var(--text); line-height: 1;
+    }
+    .stat-value.green { color: var(--green); }
+    .stat-value.red   { color: var(--red); }
+    .stat-value.gold  { color: var(--gold); }
+
+    /* ─── Results Table ──────────────────────────────────────────── */
+    #results-section { display: none; }
+    #results-section.visible { display: block; }
+
+    .results-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .filter-bar {
+      display: flex; gap: 8px;
+    }
+    .filter-btn {
+      font-family: var(--font-mono); font-size: 10px;
+      padding: 5px 12px; border-radius: 20px;
+      border: 1px solid var(--border);
+      color: var(--text-dim); background: none; cursor: pointer;
+      transition: all var(--transition); letter-spacing: .5px;
+    }
+    .filter-btn.active { border-color: var(--green); color: var(--green); }
+    .filter-btn:hover { border-color: var(--green); color: var(--green); }
+
+    .btn-export {
+      font-family: var(--font-mono); font-size: 10px;
+      padding: 5px 14px; border-radius: 20px;
+      border: 1px solid var(--gold-light);
+      color: var(--gold); background: var(--gold-dim); cursor: pointer;
+      transition: all var(--transition); letter-spacing: .5px;
+    }
+    .btn-export:hover { box-shadow: 0 0 12px var(--gold-dim); }
+
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+    }
+    table {
+      width: 100%; border-collapse: collapse;
+      font-family: var(--font-mono); font-size: 12px;
+    }
+    thead th {
+      background: var(--black-panel);
+      color: var(--text-dim); font-weight: 400;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      font-size: 10px; padding: 12px 16px;
+      text-align: left; white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+    tbody tr {
+      border-bottom: 1px solid rgba(30,30,30,.6);
+      transition: background var(--transition);
+      animation: rowIn .25s ease forwards;
+      opacity: 0;
+    }
+    @keyframes rowIn {
+      from { opacity: 0; transform: translateX(8px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    tbody tr:hover { background: var(--black-hover); }
+    tbody tr.bypassed {
+      border-left: 2px solid var(--green);
+      background: rgba(0,201,87,.03);
+    }
+    tbody tr.bypassed:hover { background: rgba(0,201,87,.06); }
+    td {
+      padding: 10px 16px; white-space: nowrap;
+      vertical-align: middle;
+    }
+    td.technique { white-space: normal; word-break: break-word; max-width: 320px; }
+
+    /* Status badges */
+    .badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 44px; padding: 3px 8px;
+      border-radius: 4px; font-weight: 600; font-size: 11px;
+    }
+    .badge-200 { background: rgba(0,201,87,.15); color: var(--green); border: 1px solid rgba(0,201,87,.3); }
+    .badge-3xx { background: rgba(255,193,7,.1);  color: var(--yellow); border: 1px solid rgba(255,193,7,.3); }
+    .badge-403 { background: rgba(30,30,30,.5);   color: #555; border: 1px solid #222; }
+    .badge-4xx { background: rgba(255,68,68,.1);  color: var(--red);    border: 1px solid rgba(255,68,68,.3); }
+    .badge-5xx { background: rgba(68,153,255,.1); color: var(--blue);   border: 1px solid rgba(68,153,255,.3); }
+    .badge-err { background: rgba(255,68,68,.1);  color: var(--red);    border: 1px solid rgba(255,68,68,.3); }
+    .badge-other{ background: rgba(100,100,100,.1); color: #888; border: 1px solid #222; }
+
+    /* Category pills */
+    .cat {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 10px; font-size: 10px; letter-spacing: .5px;
+    }
+    .cat-headers  { color: var(--blue);   background: rgba(68,153,255,.1); }
+    .cat-path     { color: var(--yellow); background: rgba(255,193,7,.1); }
+    .cat-method   { color: var(--green);  background: rgba(0,201,87,.1); }
+    .cat-ip       { color: var(--gold);   background: rgba(200,168,75,.1); }
+
+    .time-dim { color: var(--text-dim); }
+    .len-dim  { color: var(--text-dim); }
+
+    /* ─── Empty / scanning placeholder ──────────────────────────── */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    /* ─── Toast ──────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px; z-index: 999;
+      background: var(--black-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 18px;
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--text);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all .25s ease;
+      max-width: 320px;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { border-color: var(--green); color: var(--green); }
+    #toast.error   { border-color: var(--red);   color: var(--red); }
+
+    /* ─── Footer ─────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+      padding: 24px 0;
+      text-align: center;
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--text-muted); letter-spacing: 1px;
+    }
+    footer span { color: var(--green); }
+
+    /* ─── Expandable details styling ────────────────────────────── */
+    tbody tr.main-row {
+      cursor: pointer;
+    }
+    .details-row {
+      background: var(--black-panel) !important;
+      border-bottom: 1px solid var(--border) !important;
+    }
+    .details-cell {
+      padding: 0 !important;
+    }
+    .details-container {
+      padding: 20px 24px;
+      border-left: 2px solid var(--gold);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .details-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .details-lbl {
+      font-size: 9px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .details-val {
+      color: var(--text);
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+    .details-val.confidence-high { color: var(--green-text); font-weight: bold; }
+    .details-val.confidence-medium { color: var(--yellow); }
+    .details-val.confidence-low { color: var(--text-dim); }
+    .details-val.confidence-interesting { color: var(--blue); }
+    .details-val.confidence-none { color: var(--text-muted); }
+    
+    .details-code-wrap {
+      position: relative;
+      margin-top: 8px;
+    }
+    .details-code {
+      background: var(--black-deep);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      padding-right: 60px;
+      font-size: 11px;
+      color: var(--green-text);
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .details-copy-btn {
+      position: absolute;
+      right: 12px;
+      top: 12px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 9px;
+      padding: 3px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .details-copy-btn:hover {
+      background: var(--green-dim);
+      color: var(--green-text);
+      border-color: var(--green);
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .stat-row  { grid-template-columns: 1fr 1fr; }
+      .filter-bar { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── Header ────────────────────────────────────────────────────── -->
+<header>
+  <div class="container">
+    <nav>
+      <div class="logo">
+        <div class="logo-mark">403</div>
+        <div class="logo-text">BYPASS<span>.</span></div>
+      </div>
+      <div class="nav-badge">49 TECHNIQUES</div>
+    </nav>
+  </div>
+</header>
+
+<!-- ─── Main ──────────────────────────────────────────────────────── -->
+<main class="container">
+
+  <!-- Hero -->
+  <section class="hero">
+    <p class="hero-eyebrow">Access Control Testing Tool</p>
+    <h1 class="hero-title">Bypass <strong>Forbidden</strong> Resources</h1>
+    <p class="hero-sub">Test 49 bypass techniques across header injection, path traversal, HTTP method overrides, and IP spoofing against misconfigured targets.</p>
+    <div class="hero-pills">
+      <span class="pill active">18 Header Techniques</span>
+      <span class="pill active">14 Path Techniques</span>
+      <span class="pill active">11 Method Overrides</span>
+      <span class="pill active">6 IP Spoof Techniques</span>
+    </div>
+  </section>
+
+  <!-- Scan Form -->
+  <div class="card" id="scan-card">
+    <div class="card-title">Configure Scan</div>
+    <form id="scan-form" autocomplete="off">
+      <div class="form-grid">
+
+        <div class="form-group form-full">
+          <label class="form-label" for="inp-url">Target Base URL</label>
+          <input id="inp-url" class="form-input" type="url"
+            placeholder="https://target.example.com" required />
+        </div>
+
+        <div class="form-group form-full">
+          <label class="form-label" for="inp-path">Protected Path</label>
+          <input id="inp-path" class="form-input" type="text"
+            value="/admin" placeholder="/admin" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inp-workers">Concurrent Workers</label>
+          <input id="inp-workers" class="form-input" type="number"
+            value="10" min="1" max="50" />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="inp-timeout">Timeout (seconds)</label>
+          <input id="inp-timeout" class="form-input" type="number"
+            value="10" min="1" max="60" />
+        </div>
+
+        <div class="form-group form-full">
+          <label class="form-label" for="inp-headers">Extra Headers <span style="color:var(--text-muted)">(optional — Key: Value, one per line)</span></label>
+          <textarea id="inp-headers" class="form-input" rows="2"
+            placeholder="Authorization: Bearer token&#10;Cookie: session=abc123"
+            style="resize:vertical; font-size:12px;"></textarea>
+        </div>
+
+        <div class="form-group form-full">
+          <label class="form-label">Technique Categories</label>
+          <div class="toggle-row">
+            <label class="toggle">
+              <input type="checkbox" name="cat" value="Headers" checked />
+              <span class="toggle-dot"></span> Headers (18)
+            </label>
+            <label class="toggle">
+              <input type="checkbox" name="cat" value="Path" checked />
+              <span class="toggle-dot"></span> Path (14)
+            </label>
+            <label class="toggle">
+              <input type="checkbox" name="cat" value="Method" checked />
+              <span class="toggle-dot"></span> Method (11)
+            </label>
+            <label class="toggle">
+              <input type="checkbox" name="cat" value="IP Spoof" checked />
+              <span class="toggle-dot"></span> IP Spoof (6)
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group" style="align-items:center; justify-content:center; flex-direction:row; gap:10px; padding-top:6px;">
+          <label class="toggle" title="Skip TLS certificate verification">
+            <input type="checkbox" id="inp-insecure" />
+            <span class="toggle-dot"></span> Skip TLS Verify
+          </label>
+        </div>
+
+        <div class="form-group form-full">
+          <button type="submit" class="btn-scan" id="btn-scan">
+            ⬡ &nbsp; INITIATE SCAN
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Progress -->
+  <div class="card" id="progress-section">
+    <div class="card-title">Scanning</div>
+    <div class="scan-meta">
+      <span class="scan-url" id="scan-target-label">—</span>
+      <span class="scan-count" id="scan-count-label">0 / 0</span>
+    </div>
+    <div class="progress-track scanning" id="progress-track">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="stat-label">Scanned</div>
+        <div class="stat-value" id="st-scanned">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Bypassed</div>
+        <div class="stat-value green" id="st-bypassed">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Errors</div>
+        <div class="stat-value red" id="st-errors">0</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">Elapsed</div>
+        <div class="stat-value gold" id="st-time">0s</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results -->
+  <div class="card" id="results-section">
+    <div class="results-header">
+      <div class="card-title" style="margin:0">Results</div>
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div class="filter-bar" id="filter-bar">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="bypass">Bypassed</button>
+          <button class="filter-btn" data-filter="Headers">Headers</button>
+          <button class="filter-btn" data-filter="Path">Path</button>
+          <button class="filter-btn" data-filter="Method">Method</button>
+          <button class="filter-btn" data-filter="IP Spoof">IP Spoof</button>
+        </div>
+        <button class="btn-export" id="btn-export">↓ Export JSON</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Time</th>
+            <th>Length</th>
+            <th>Category</th>
+            <th>Technique</th>
+          </tr>
+        </thead>
+        <tbody id="results-body">
+          <tr><td colspan="5" class="empty-state">Awaiting scan…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div class="container">
+    <span>403BYPASS</span> · Access Control Testing Tool · Use responsibly on authorised targets only
+  </div>
+</footer>
+
+<div id="toast"></div>
+
+<script>
+/* ─── State ────────────────────────────────────────────────────────── */
+let allResults = [];
+let scanStart  = 0;
+let timerID    = null;
+let activeFilter = 'all';
+
+/* ─── DOM refs ─────────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const form          = $('scan-form');
+const btnScan       = $('btn-scan');
+const progressSec   = $('progress-section');
+const resultsSec    = $('results-section');
+const progressFill  = $('progress-fill');
+const progressTrack = $('progress-track');
+const stScanned     = $('st-scanned');
+const stBypassed    = $('st-bypassed');
+const stErrors      = $('st-errors');
+const stTime        = $('st-time');
+const resultsBody   = $('results-body');
+const scanTargetLbl = $('scan-target-label');
+const scanCountLbl  = $('scan-count-label');
+
+/* ─── Form Submit ──────────────────────────────────────────────────── */
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const url     = $('inp-url').value.trim();
+  const path    = $('inp-path').value.trim() || '/';
+  const workers = parseInt($('inp-workers').value) || 10;
+  const timeout = parseInt($('inp-timeout').value) || 10;
+  const insecure= $('inp-insecure').checked;
+  const cats    = [...document.querySelectorAll('[name=cat]:checked')].map(x => x.value);
+  const headers = parseHeaders($('inp-headers').value);
+
+  if (!url) return;
+
+  startScan({ url, path, workers, timeout, insecure, filter: cats, headers });
+});
+
+/* ─── Parse extra headers textarea ────────────────────────────────── */
+function parseHeaders(raw) {
+  const out = {};
+  raw.split('\n').forEach(line => {
+    const idx = line.indexOf(':');
+    if (idx > 0) {
+      out[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+    }
+  });
+  return out;
+}
+
+/* ─── Start scan ───────────────────────────────────────────────────── */
+async function startScan(cfg) {
+  allResults = [];
+  resultsBody.innerHTML = '<tr><td colspan="5" class="empty-state">Scanning…</td></tr>';
+  activeFilter = 'all';
+  setActiveFilter('all');
+
+  btnScan.disabled = true;
+  btnScan.textContent = '⬡  SCANNING…';
+
+  progressSec.classList.add('visible');
+  resultsSec.classList.add('visible');
+  progressTrack.classList.add('scanning');
+  progressFill.style.width = '0%';
+  stScanned.textContent  = '0';
+  stBypassed.textContent = '0';
+  stErrors.textContent   = '0';
+  stTime.textContent     = '0s';
+  scanTargetLbl.textContent = cfg.url + cfg.path;
+
+  scanStart = Date.now();
+  timerID = setInterval(() => {
+    stTime.textContent = ((Date.now() - scanStart) / 1000).toFixed(1) + 's';
+  }, 100);
+
+  let total = 0, done = 0, bypassed = 0, errors = 0;
+  let firstRow = true;
+
+  try {
+    const resp = await fetch('/api/scan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cfg),
+    });
+
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(txt);
+    }
+
+    const reader  = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer    = '';
+
+    while (true) {
+      const { done: eof, value } = await reader.read();
+      if (eof) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE events from buffer
+      const events = parseSSE(buffer);
+      buffer = events.remainder;
+
+      for (const ev of events.list) {
+        if (ev.type === 'start') {
+          total = ev.data.total;
+          scanCountLbl.textContent = `0 / ${total}`;
+
+        } else if (ev.type === 'result') {
+          done++;
+          const r = ev.data.result;
+          if (r.bypassed) bypassed++;
+          if (r.status_code === -1) errors++;
+
+          allResults.push(r);
+          if (firstRow) { resultsBody.innerHTML = ''; firstRow = false; }
+          appendRow(r);
+
+          const pct = total ? (done / total * 100) : 0;
+          progressFill.style.width = pct + '%';
+          stScanned.textContent  = done;
+          stBypassed.textContent = bypassed;
+          stErrors.textContent   = errors;
+          scanCountLbl.textContent = `${done} / ${total}`;
+
+        } else if (ev.type === 'done') {
+          onDone(total, bypassed);
+        }
+      }
+    }
+  } catch (err) {
+    showToast('Error: ' + err.message, 'error');
+  } finally {
+    clearInterval(timerID);
+    stTime.textContent = ((Date.now() - scanStart) / 1000).toFixed(1) + 's';
+    progressTrack.classList.remove('scanning');
+    btnScan.disabled = false;
+    btnScan.textContent = '⬡  INITIATE SCAN';
+  }
+}
+
+/* ─── SSE parser ───────────────────────────────────────────────────── */
+function parseSSE(raw) {
+  const list = [];
+  const blocks = raw.split('\n\n');
+  const remainder = blocks.pop(); // last block may be incomplete
+  for (const block of blocks) {
+    let type = '', dataStr = '';
+    for (const line of block.split('\n')) {
+      if (line.startsWith('event: ')) type = line.slice(7).trim();
+      else if (line.startsWith('data: ')) dataStr = line.slice(6).trim();
+    }
+    if (type && dataStr) {
+      try { list.push({ type, data: JSON.parse(dataStr) }); } catch {}
+    }
+  }
+  return { list, remainder };
+}
+
+/* ─── Copy to Clipboard ────────────────────────────────────────────── */
+function copyToClipboard(btn, text) {
+  if (!navigator.clipboard) {
+    const el = document.createElement('textarea');
+    el.value = text;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+    showToast('Copied to clipboard');
+    return;
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+    showToast('Copied to clipboard');
+  }).catch(() => {
+    showToast('Failed to copy', 'error');
+  });
+}
+
+/* ─── Append result row ────────────────────────────────────────────── */
+function appendRow(r) {
+  const tr = document.createElement('tr');
+  tr.classList.add('main-row');
+  if (r.bypassed) tr.classList.add('bypassed');
+
+  const status = r.status_code === -1 ? 'ERR' : r.status_code;
+  const badgeClass = statusBadge(r.status_code);
+  const catClass   = catBadge(r.category);
+  const length     = r.content_length < 0 ? '—' : fmtSize(r.content_length);
+
+  tr.innerHTML = `
+    <td><span class="badge ${badgeClass}">${status}</span></td>
+    <td class="time-dim">${r.response_time_ms}ms</td>
+    <td class="len-dim">${length}</td>
+    <td><span class="cat ${catClass}">${r.category}</span></td>
+    <td class="technique" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <span>${escHtml(r.technique)}${r.error ? ` <span style="color:var(--red);font-size:10px;">(${escHtml(r.error)})</span>` : ''}</span>
+      <span class="expand-indicator" style="font-size:10px; color:var(--text-dim); transition: transform var(--transition);">▶</span>
+    </td>
+  `;
+
+  const trDetails = document.createElement('tr');
+  trDetails.classList.add('details-row');
+  trDetails.style.display = 'none';
+
+  const methodBadge = r.method ? `<span class="badge badge-other" style="min-width:auto; padding:2px 6px; font-size:10px; font-weight:bold; margin-right:6px;">${escHtml(r.method)}</span>` : '';
+  const confidenceClass = `confidence-${String(r.confidence).toLowerCase()}`;
+  const confidenceBadge = `<span class="details-val ${confidenceClass}" style="font-weight:bold;">${escHtml(r.confidence)} (${r.score})</span>`;
+
+  trDetails.innerHTML = `
+    <td colspan="5" class="details-cell">
+      <div class="details-container">
+        <div class="details-grid">
+          <div class="details-item">
+            <span class="details-lbl">Target URL</span>
+            <span class="details-val">${methodBadge}${escHtml(r.url)}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-lbl">Payload Description</span>
+            <span class="details-val">${escHtml(r.description || 'No description')}</span>
+          </div>
+          <div class="details-item">
+            <span class="details-lbl">Confidence Assessment</span>
+            ${confidenceBadge}
+          </div>
+        </div>
+        <div class="details-item">
+          <span class="details-lbl">Reproduction Command</span>
+          <div class="details-code-wrap">
+            <pre class="details-code"><code>${escHtml(r.curl || '# Curl command not generated')}</code></pre>
+            <button class="details-copy-btn" onclick="copyToClipboard(this, \`${escHtml(r.curl || '').replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`)">Copy</button>
+          </div>
+        </div>
+      </div>
+    </td>
+  `;
+
+  // Toggle open/close on main row click
+  tr.addEventListener('click', () => {
+    const isExpanded = trDetails.style.display !== 'none';
+    trDetails.style.display = isExpanded ? 'none' : 'table-row';
+    const indicator = tr.querySelector('.expand-indicator');
+    if (indicator) {
+      indicator.style.transform = isExpanded ? 'rotate(0deg)' : 'rotate(90deg)';
+    }
+  });
+
+  // Apply current filter
+  if (!rowMatchesFilter(r)) {
+    tr.style.display = 'none';
+    trDetails.style.display = 'none';
+  }
+  
+  resultsBody.appendChild(tr);
+  resultsBody.appendChild(trDetails);
+}
+
+function statusBadge(code) {
+  if (code === -1) return 'badge-err';
+  if (code >= 200 && code < 300) return 'badge-200';
+  if (code >= 300 && code < 400) return 'badge-3xx';
+  if (code === 403 || code === 401) return 'badge-403';
+  if (code >= 400 && code < 500) return 'badge-4xx';
+  if (code >= 500) return 'badge-5xx';
+  return 'badge-other';
+}
+
+function catBadge(cat) {
+  const map = { 'Headers': 'cat-headers', 'Path': 'cat-path', 'Method': 'cat-method', 'IP Spoof': 'cat-ip' };
+  return map[cat] || '';
+}
+
+function fmtSize(n) {
+  if (n < 1024) return n + 'B';
+  if (n < 1024*1024) return (n/1024).toFixed(1) + 'KB';
+  return (n/1024/1024).toFixed(1) + 'MB';
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ─── Scan complete ─────────────────────────────────────────────────── */
+function onDone(total, bypassed) {
+  progressFill.style.width = '100%';
+  const msg = bypassed > 0
+    ? `✓ ${bypassed} bypass${bypassed > 1 ? 'es' : ''} found out of ${total} techniques`
+    : `✗ No bypasses found out of ${total} techniques`;
+  showToast(msg, bypassed > 0 ? 'success' : '');
+}
+
+/* ─── Filter ────────────────────────────────────────────────────────── */
+$('filter-bar').addEventListener('click', e => {
+  const btn = e.target.closest('[data-filter]');
+  if (!btn) return;
+  setActiveFilter(btn.dataset.filter);
+});
+
+function setActiveFilter(filter) {
+  activeFilter = filter;
+  document.querySelectorAll('[data-filter]').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === filter);
+  });
+  for (let i = 0; i < allResults.length; i++) {
+    const r = allResults[i];
+    const mainRow = resultsBody.children[i * 2];
+    const detailsRow = resultsBody.children[i * 2 + 1];
+    if (!mainRow || !detailsRow) continue;
+    
+    if (rowMatchesFilter(r)) {
+      mainRow.style.display = '';
+      detailsRow.style.display = 'none';
+      const indicator = mainRow.querySelector('.expand-indicator');
+      if (indicator) indicator.style.transform = 'rotate(0deg)';
+    } else {
+      mainRow.style.display = 'none';
+      detailsRow.style.display = 'none';
+    }
+  }
+}
+
+function rowMatchesFilter(r) {
+  if (activeFilter === 'all')    return true;
+  if (activeFilter === 'bypass') return r.bypassed;
+  return r.category === activeFilter;
+}
+
+/* ─── Export ─────────────────────────────────────────────────────────── */
+$('btn-export').addEventListener('click', () => {
+  if (!allResults.length) return;
+  const blob = new Blob([JSON.stringify(allResults, null, 2)], { type: 'application/json' });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: `bypass_${Date.now()}.json`,
+  });
+  a.click();
+  showToast('Exported ' + allResults.length + ' results');
+});
+
+/* ─── Toast ──────────────────────────────────────────────────────────── */
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ''; }, 3500);
+}
+</script>
+
+</body>
+</html>
